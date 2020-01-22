@@ -1,0 +1,123 @@
+diff --unified --recursive --text anyconnect-3.1.14018/vpn/vpn_install.sh anyconnect-3.1.14018.new/vpn/vpn_install.sh
+--- anyconnect-3.1.14018/vpn/vpn_install.sh	2016-02-29 11:55:13.000000000 +0100
++++ anyconnect-3.1.14018.new/vpn/vpn_install.sh	2019-06-26 09:43:43.667537545 +0200
+@@ -45,42 +45,6 @@
+   echo "Sorry, you need super user privileges to run this script."
+   exit 1
+ fi
+-## The web-based installer used for VPN client installation and upgrades does
+-## not have the license.txt in the current directory, intentionally skipping
+-## the license agreement. Bug CSCtc45589 has been filed for this behavior.   
+-if [ -f "license.txt" ]; then
+-    cat ./license.txt
+-    echo
+-    echo -n "Do you accept the terms in the license agreement? [y/n] "
+-    read LICENSEAGREEMENT
+-    while : 
+-    do
+-      case ${LICENSEAGREEMENT} in
+-           [Yy][Ee][Ss])
+-                   echo "You have accepted the license agreement."
+-                   echo "Please wait while ${CLIENTNAME} is being installed..."
+-                   break
+-                   ;;
+-           [Yy])
+-                   echo "You have accepted the license agreement."
+-                   echo "Please wait while ${CLIENTNAME} is being installed..."
+-                   break
+-                   ;;
+-           [Nn][Oo])
+-                   echo "The installation was cancelled because you did not accept the license agreement."
+-                   exit 1
+-                   ;;
+-           [Nn])
+-                   echo "The installation was cancelled because you did not accept the license agreement."
+-                   exit 1
+-                   ;;
+-           *)    
+-                   echo "Please enter either \"y\" or \"n\"."
+-                   read LICENSEAGREEMENT
+-                   ;;
+-      esac
+-    done
+-fi
+ if [ "`basename $0`" != "vpn_install.sh" ]; then
+   if which mktemp >/dev/null 2>&1; then
+     TEMPDIR=`mktemp -d /tmp/vpn.XXXXXX`
+@@ -93,63 +57,6 @@
+   TEMPDIR="."
+ fi
+ 
+-#
+-# Check for and uninstall any previous version.
+-#
+-if [ -x "${LEGACY_UNINST}" ]; then
+-  echo "Removing previous installation..."
+-  echo "Removing previous installation: "${LEGACY_UNINST} >> /tmp/${LOGFNAME}
+-  STATUS=`${LEGACY_UNINST}`
+-  if [ "${STATUS}" ]; then
+-    echo "Error removing previous installation!  Continuing..." >> /tmp/${LOGFNAME}
+-  fi
+-
+-  # migrate the /opt/cisco/vpn directory to /opt/cisco/anyconnect directory
+-  echo "Migrating ${LEGACY_INSTPREFIX} directory to ${INSTPREFIX} directory" >> /tmp/${LOGFNAME}
+-
+-  ${INSTALL} -d ${INSTPREFIX}
+-
+-  # local policy file
+-  if [ -f "${LEGACY_INSTPREFIX}/AnyConnectLocalPolicy.xml" ]; then
+-    mv -f ${LEGACY_INSTPREFIX}/AnyConnectLocalPolicy.xml ${INSTPREFIX}/ >/dev/null 2>&1
+-  fi
+-
+-  # global preferences
+-  if [ -f "${LEGACY_INSTPREFIX}/.anyconnect_global" ]; then
+-    mv -f ${LEGACY_INSTPREFIX}/.anyconnect_global ${INSTPREFIX}/ >/dev/null 2>&1
+-  fi
+-
+-  # logs
+-  mv -f ${LEGACY_INSTPREFIX}/*.log ${INSTPREFIX}/ >/dev/null 2>&1
+-
+-  # VPN profiles
+-  if [ -d "${LEGACY_INSTPREFIX}/profile" ]; then
+-    ${INSTALL} -d ${INSTPREFIX}/profile
+-    tar cf - -C ${LEGACY_INSTPREFIX}/profile . | (cd ${INSTPREFIX}/profile; tar xf -)
+-    rm -rf ${LEGACY_INSTPREFIX}/profile
+-  fi
+-
+-  # VPN scripts
+-  if [ -d "${LEGACY_INSTPREFIX}/script" ]; then
+-    ${INSTALL} -d ${INSTPREFIX}/script
+-    tar cf - -C ${LEGACY_INSTPREFIX}/script . | (cd ${INSTPREFIX}/script; tar xf -)
+-    rm -rf ${LEGACY_INSTPREFIX}/script
+-  fi
+-
+-  # localization
+-  if [ -d "${LEGACY_INSTPREFIX}/l10n" ]; then
+-    ${INSTALL} -d ${INSTPREFIX}/l10n
+-    tar cf - -C ${LEGACY_INSTPREFIX}/l10n . | (cd ${INSTPREFIX}/l10n; tar xf -)
+-    rm -rf ${LEGACY_INSTPREFIX}/l10n
+-  fi
+-elif [ -x "${UNINST}" ]; then
+-  echo "Removing previous installation..."
+-  echo "Removing previous installation: "${UNINST} >> /tmp/${LOGFNAME}
+-  STATUS=`${UNINST}`
+-  if [ "${STATUS}" ]; then
+-    echo "Error removing previous installation!  Continuing..." >> /tmp/${LOGFNAME}
+-  fi
+-fi
+ 
+ if [ "${TEMPDIR}" != "." ]; then
+   TARNAME=`date +%N`
+@@ -496,12 +403,6 @@
+     fi
+   fi
+ 
+-  echo "Starting ${CLIENTNAME} Agent..."
+-  echo "Starting ${CLIENTNAME} Agent..." >> /tmp/${LOGFNAME}
+-  # Attempt to start up the agent
+-  echo ${INITD}/${INIT} start >> /tmp/${LOGFNAME}
+-  logger "Starting ${CLIENTNAME} Agent..."
+-  ${INITD}/${INIT} start >> /tmp/${LOGFNAME} || exit 1
+ 
+ fi
+ 
