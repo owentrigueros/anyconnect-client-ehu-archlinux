@@ -1,0 +1,219 @@
+diff --unified --recursive --text anyconnect-linux64-4.8.01090.orig/vpn/vpn_install.sh anyconnect-linux64-4.8.01090.new/vpn/vpn_install.sh
+--- anyconnect-linux64-4.8.01090.orig/vpn/vpn_install.sh	2019-10-21 15:19:20.000000000 +0200
++++ anyconnect-linux64-4.8.01090.new/vpn/vpn_install.sh	2020-01-23 08:53:29.159575078 +0100
+@@ -98,48 +98,6 @@
+ echo "Installing ${CLIENTNAME}..." > /tmp/${LOGFNAME}
+ echo `whoami` "invoked $0 from " `pwd` " at " `date` >> /tmp/${LOGFNAME}
+ 
+-# Make sure we are root
+-if [ `id | sed -e 's/(.*//'` != "uid=0" ]; then
+-  echo "Sorry, you need super user privileges to run this script."
+-  exit 1
+-fi
+-## The web-based installer used for VPN client installation and upgrades does
+-## not have the license.txt in the current directory, intentionally skipping
+-## the license agreement. Bug CSCtc45589 has been filed for this behavior.
+-if [ -f "license.txt" ]; then
+-    cat ./license.txt
+-    echo
+-    echo -n "Do you accept the terms in the license agreement? [y/n] "
+-    read LICENSEAGREEMENT
+-    while :
+-    do
+-      case ${LICENSEAGREEMENT} in
+-           [Yy][Ee][Ss])
+-                   echo "You have accepted the license agreement."
+-                   echo "Please wait while ${CLIENTNAME} is being installed..."
+-                   break
+-                   ;;
+-           [Yy])
+-                   echo "You have accepted the license agreement."
+-                   echo "Please wait while ${CLIENTNAME} is being installed..."
+-                   break
+-                   ;;
+-           [Nn][Oo])
+-                   echo "The installation was cancelled because you did not accept the license agreement."
+-                   exit 1
+-                   ;;
+-           [Nn])
+-                   echo "The installation was cancelled because you did not accept the license agreement."
+-                   exit 1
+-                   ;;
+-           *)
+-                   echo "Please enter either \"y\" or \"n\"."
+-                   read LICENSEAGREEMENT
+-                   ;;
+-      esac
+-    done
+-fi
+-
+ checkVersionFeasibilityWithVPN
+ 
+ checkVersionFeasibilityWithStandaloneNVM
+@@ -156,64 +114,6 @@
+   TEMPDIR="."
+ fi
+ 
+-#
+-# Check for and uninstall any previous version.
+-#
+-if [ -x "${LEGACY_UNINST}" ]; then
+-  echo "Removing previous installation..."
+-  echo "Removing previous installation: ${LEGACY_UNINST}" >> /tmp/${LOGFNAME}
+-  if ! ${LEGACY_UNINST}; then
+-    echo "Error removing previous installation!  Continuing..."
+-    echo "Error removing previous installation!  Continuing..." >> /tmp/${LOGFNAME}
+-  fi
+-
+-  # migrate the /opt/cisco/vpn directory to /opt/cisco/anyconnect directory
+-  echo "Migrating ${LEGACY_INSTPREFIX} directory to ${INSTPREFIX} directory" >> /tmp/${LOGFNAME}
+-
+-  ${INSTALL} -d ${INSTPREFIX}
+-
+-  # local policy file
+-  if [ -f "${LEGACY_INSTPREFIX}/AnyConnectLocalPolicy.xml" ]; then
+-    mv -f ${LEGACY_INSTPREFIX}/AnyConnectLocalPolicy.xml ${INSTPREFIX}/ >/dev/null 2>&1
+-  fi
+-
+-  # global preferences
+-  if [ -f "${LEGACY_INSTPREFIX}/.anyconnect_global" ]; then
+-    mv -f ${LEGACY_INSTPREFIX}/.anyconnect_global ${INSTPREFIX}/ >/dev/null 2>&1
+-  fi
+-
+-  # logs
+-  mv -f ${LEGACY_INSTPREFIX}/*.log ${INSTPREFIX}/ >/dev/null 2>&1
+-
+-  # VPN profiles
+-  if [ -d "${LEGACY_INSTPREFIX}/profile" ]; then
+-    ${INSTALL} -d ${INSTPREFIX}/profile
+-    tar cf - -C ${LEGACY_INSTPREFIX}/profile . | (cd ${INSTPREFIX}/profile; tar xf -)
+-    rm -rf ${LEGACY_INSTPREFIX}/profile
+-  fi
+-
+-  # VPN scripts
+-  if [ -d "${LEGACY_INSTPREFIX}/script" ]; then
+-    ${INSTALL} -d ${INSTPREFIX}/script
+-    tar cf - -C ${LEGACY_INSTPREFIX}/script . | (cd ${INSTPREFIX}/script; tar xf -)
+-    rm -rf ${LEGACY_INSTPREFIX}/script
+-  fi
+-
+-  # localization
+-  if [ -d "${LEGACY_INSTPREFIX}/l10n" ]; then
+-    ${INSTALL} -d ${INSTPREFIX}/l10n
+-    tar cf - -C ${LEGACY_INSTPREFIX}/l10n . | (cd ${INSTPREFIX}/l10n; tar xf -)
+-    rm -rf ${LEGACY_INSTPREFIX}/l10n
+-  fi
+-elif [ -x "${UNINST}" ]; then
+-  echo "Removing previous installation..."
+-  echo "Removing previous installation: "${UNINST} >> /tmp/${LOGFNAME}
+-  STATUS=`${UNINST}`
+-  if [ "${STATUS}" ]; then
+-    echo "Error removing previous installation!  Continuing..." >> /tmp/${LOGFNAME}
+-  fi
+-fi
+-
+ # Ensure that vpn related processes are not running. Uninstall script from old AC version may left some of them alive.
+ OURPROCS=`ps -A -o pid,command | grep '/opt/cisco/anyconnect/bin' | egrep -v 'grep' | awk '{print $1}'`
+ if [ -n "${OURPROCS}" ] ; then
+@@ -401,9 +301,6 @@
+     exit 1
+ fi
+ 
+-echo "Updating GTK icon cache" >> /tmp/${LOGFNAME}
+-gtk-update-icon-cache -f -t /usr/share/icons/hicolor >> /tmp/${LOGFNAME} 2>&1
+-
+ if [ -f "${NEWTEMP}/cisco-anyconnect.menu" ]; then
+     echo "Installing ${NEWTEMP}/cisco-anyconnect.menu" >> /tmp/${LOGFNAME}
+     mkdir -p /etc/xdg/menus/applications-merged || exit
+@@ -621,25 +518,6 @@
+     rm -rf ${FEEDBACK_DIR}
+ fi
+ 
+-# generate default AnyConnect Local Policy file if it doesn't already exist
+-${BINDIR}/acinstallhelper -acpolgen bd=${BYPASS_DOWNLOADER:-false} \
+-                                    fm=${FIPS_MODE:-false} \
+-                                    rpc=${RESTRICT_PREFERENCE_CACHING:-false} \
+-                                    rtp=${RESTRICT_TUNNEL_PROTOCOLS:-false} \
+-                                    rwl=${RESTRICT_WEB_LAUNCH:-false} \
+-                                    sct=${STRICT_CERTIFICATE_TRUST:-false} \
+-                                    epf=${EXCLUDE_PEM_FILE_CERT_STORE:-false} \
+-                                    ewn=${EXCLUDE_WIN_NATIVE_CERT_STORE:-false} \
+-                                    emn=${EXCLUDE_MAC_NATIVE_CERT_STORE:-false} \
+-                                    efn=${EXCLUDE_FIREFOX_NSS_CERT_STORE:-false} \
+-                                    upsu=${ALLOW_SOFTWARE_UPDATES_FROM_ANY_SERVER:-true} \
+-                                    upcu=${ALLOW_COMPLIANCE_MODULE_UPDATES_FROM_ANY_SERVER:-true} \
+-                                    upvp=${ALLOW_VPN_PROFILE_UPDATES_FROM_ANY_SERVER:-true} \
+-                                    upmv=${ALLOW_MGMT_VPN_PROFILE_UPDATES_FROM_ANY_SERVER:-true} \
+-                                    upip=${ALLOW_ISE_PROFILE_UPDATES_FROM_ANY_SERVER:-true} \
+-                                    upsp=${ALLOW_SERVICE_PROFILE_UPDATES_FROM_ANY_SERVER:-true} \
+-                                    upal=${AUTHORIZED_SERVER_LIST}
+-
+ # Attempt to install the init script in the proper place
+ 
+ # Find out if we are using chkconfig
+@@ -685,65 +563,6 @@
+   fi
+ fi
+ 
+-TESTINIT=`ls -l /proc/1/exe`
+-if [ -z "${TESTINIT##*"systemd"*}" ]; then
+- # try stop vpnagentd service first in case user is upgrading from old version which doesn't have the proper unintall script
+- echo systemctl stop ${INIT} >> /tmp/${LOGFNAME}
+- systemctl stop ${INIT} >> /tmp/${LOGFNAME} 2>&1
+- echo systemctl disable ${INIT} >> /tmp/${LOGFNAME}
+- systemctl disable ${INIT} >> /tmp/${LOGFNAME} 2>&1
+-
+- echo "install systemd" >> /tmp/${LOGFNAME}
+- echo "Installing "${NEWTEMP}/${SYSTEMD_SRC} >> /tmp/${LOGFNAME}
+- echo ${INSTALL} -o root -m 644 ${NEWTEMP}/${SYSTEMD_SRC} ${SYSTEMD_CONF_DIR}/${SYSTEMD_SRC} >> /tmp/${LOGFNAME}
+- ${INSTALL} -o root -m 644 ${NEWTEMP}/${SYSTEMD_SRC} ${SYSTEMD_CONF_DIR}/${SYSTEMD_SRC} || exit 1
+-
+- echo systemctl enable ${INIT} >> /tmp/${LOGFNAME}
+- systemctl enable ${INIT} >> /tmp/${LOGFNAME} 2>&1
+-
+- echo "Starting ${CLIENTNAME} Agent..."
+- echo "Starting ${CLIENTNAME} Agent..." >> /tmp/${LOGFNAME}
+-
+- echo systemctl start ${INIT} >> /tmp/${LOGFNAME}
+- systemctl start ${INIT} >> /tmp/${LOGFNAME} || exit 1
+-elif [ "x${INITD}" != "x" ]; then
+- echo "no install systemd" >> /tmp/${LOGFNAME}
+-  echo "Installing "${NEWTEMP}/${INIT_SRC} >> /tmp/${LOGFNAME}
+-  echo ${INSTALL} -o root -m 755 ${NEWTEMP}/${INIT_SRC} ${INITD}/${INIT} >> /tmp/${LOGFNAME}
+-  ${INSTALL} -o root -m 755 ${NEWTEMP}/${INIT_SRC} ${INITD}/${INIT} || exit 1
+-  if [ "x${CHKCONFIG}" != "x" ]; then
+-    echo ${CHKCONFIG} --add ${INIT} >> /tmp/${LOGFNAME}
+-    ${CHKCONFIG} --add ${INIT}
+-  else
+-    if [ "x${BSDINIT}" != "x" ]; then
+-      for LEVEL in ${SYSVLEVELS}; do
+-        DIR="rc${LEVEL}.d"
+-        if [ ! -d "${RCD}/${DIR}" ]; then
+-          mkdir ${RCD}/${DIR}
+-          chmod 755 ${RCD}/${DIR}
+-        fi
+-        ln -sf ${INITD}/${INIT} ${RCD}/${DIR}/${SYSVSTART}${INIT}
+-        ln -sf ${INITD}/${INIT} ${RCD}/${DIR}/${SYSVSTOP}${INIT}
+-      done
+-    fi
+-  fi
+-
+-  # Attempt to start up the agent
+-  echo "Starting ${CLIENTNAME} Agent..."
+-  echo "Starting ${CLIENTNAME} Agent..." >> /tmp/${LOGFNAME}
+-  
+-   echo ${INITD}/${INIT} start >> /tmp/${LOGFNAME}
+-   logger "Starting ${CLIENTNAME} Agent..."
+-   ${INITD}/${INIT} start >> /tmp/${LOGFNAME} || exit 1
+-
+-fi
+-
+-# Generate/update the VPNManifest.dat file
+-if [ -f ${BINDIR}/manifesttool_vpn ]; then  
+-   ${BINDIR}/manifesttool_vpn -i ${INSTPREFIX} ${INSTPREFIX}/ACManifestVPN.xml
+-fi
+-
+-
+ if [ "${RMTEMP}" = "yes" ]; then
+   echo rm -rf ${TEMPDIR} >> /tmp/${LOGFNAME}
+   rm -rf ${TEMPDIR}
